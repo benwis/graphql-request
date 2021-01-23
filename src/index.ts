@@ -48,14 +48,13 @@ export class GraphQLClient {
   ): Promise<{ data?: T; extensions?: any; headers: Dom.Headers; status: number; errors?: GraphQLError[] }> {
     let { headers, fetch: localFetch = crossFetch, ...others } = this.options
     const body = createRequestBody(query, variables)
- 
 
     const response = await localFetch(this.url, {
       method: 'POST',
       headers: {
         ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...resolveHeaders(headers),
-        ...resolveHeaders(requestHeaders)
+        ...resolveHeaders(requestHeaders),
       },
       body,
       ...others,
@@ -74,12 +73,35 @@ export class GraphQLClient {
       )
     }
   }
+  async rawRequestResponse<T = any, V = Variables>(
+    query: string,
+    variables?: V,
+    requestHeaders?: Dom.RequestInit['headers']
+  ): Promise<Dom.Response> {
+    let { headers, fetch: localFetch = crossFetch, ...others } = this.options
+    const body = createRequestBody(query, variables)
+
+    const response = await localFetch(this.url, {
+      method: 'POST',
+      headers: {
+        ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
+        ...resolveHeaders(headers),
+        ...resolveHeaders(requestHeaders),
+      },
+      body,
+      ...others,
+    })
+    return response
+  }
 
   /**
    * Send a GraphQL document to the server.
    */
-  async request<T = any, V = Variables>(document: RequestDocument, variables?: V, 
-    requestHeaders?: Dom.RequestInit['headers']): Promise<T> {
+  async request<T = any, V = Variables>(
+    document: RequestDocument,
+    variables?: V,
+    requestHeaders?: Dom.RequestInit['headers']
+  ): Promise<T> {
     let { headers, fetch: localFetch = crossFetch, ...others } = this.options
     const resolvedDoc = resolveRequestDocument(document)
     const body = createRequestBody(resolvedDoc, variables)
@@ -89,7 +111,7 @@ export class GraphQLClient {
       headers: {
         ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
         ...resolveHeaders(headers),
-        ...resolveHeaders(requestHeaders)
+        ...resolveHeaders(requestHeaders),
       },
       body,
       ...others,
@@ -143,6 +165,20 @@ export async function rawRequest<T = any, V = Variables>(
   return client.rawRequest<T, V>(query, variables)
 }
 
+/**
+ * Returns raw Fetch API Response for processing in the client, like in a remix-run dataloader
+ * @param url
+ * @param query
+ * @param variables
+ */
+export async function rawRequestResponse<T = any, V = Variables>(
+  url: string,
+  query: string,
+  variables?: V
+): Promise<Dom.Response> {
+  const client = new GraphQLClient(url)
+  return client.rawRequestResponse<T, V>(query, variables)
+}
 /**
  * Send a GraphQL Document to the GraphQL server for exectuion.
  *

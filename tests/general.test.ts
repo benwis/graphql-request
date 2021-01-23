@@ -1,4 +1,4 @@
-import { GraphQLClient, rawRequest, request } from '../src'
+import { GraphQLClient, rawRequest, rawRequestResponse, request } from '../src'
 import { setupTestServer } from './__helpers'
 
 const ctx = setupTestServer()
@@ -32,6 +32,27 @@ test('minimal raw query', async () => {
   }).spec.body
   const { headers, ...result } = await rawRequest(ctx.url, `{ me { id } }`)
   expect(result).toEqual({ data, extensions, status: 200 })
+})
+
+test('minimal raw query, returning a raw Promise for client side processing', async () => {
+  const { extensions, data } = ctx.res({
+    body: {
+      data: {
+        me: {
+          id: 'some-id',
+        },
+      },
+      extensions: {
+        version: '1',
+      },
+    },
+  }).spec.body
+  const response = rawRequestResponse(ctx.url, `{ me { id } }`)
+
+  // console.log(`Results: ${response} `)
+  //await expect(Promise.resolve(response)).resolves.toEqual({ data, extensions, status: 200 })
+
+  await expect(Promise.resolve(response)).resolves.toEqual(expect.objectContaining({ size: 0, status: 200 }))
 })
 
 test('minimal raw query with response headers', async () => {
@@ -90,7 +111,7 @@ test('basic error', async () => {
     },
   })
 
-  const res = await request(ctx.url, `x`).catch((x) => x)
+  const res = await request(ctx.url, 'x').catch((x) => x)
 
   expect(res).toMatchInlineSnapshot(
     `[Error: GraphQL Error (Code: 200): {"response":{"errors":{"message":"Syntax Error GraphQL request (1:1) Unexpected Name \\"x\\"\\n\\n1: x\\n   ^\\n","locations":[{"line":1,"column":1}]},"status":200,"headers":{}},"request":{"query":"x"}}]`
